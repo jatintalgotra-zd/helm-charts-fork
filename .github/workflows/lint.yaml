@@ -16,9 +16,10 @@ jobs:
         with:
           version: v3.17.0
 
-      - name: lint charts
+      - name: Lint only changed charts
         run: |
-          for chart in charts/*; do
+          CHANGED_DIRS=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep '^charts/' | cut -d/ -f1-2 | sort -u)
+          for chart in $CHANGED_DIRS; do
             if [ -f "$chart/Chart.yaml" ]; then
               echo "Linting $chart"
               helm lint "$chart"
