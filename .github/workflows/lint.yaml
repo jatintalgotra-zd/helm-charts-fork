@@ -15,4 +15,4 @@ jobs:
         uses: helm/chart-testing-action@v2.7.0
 
       - name: helm-lint
-        run: ct lint --all --chart-repos zookeeper=https://helm.zop.dev
+        run: ct lint --all --chart-repos zookeeper=https://helm.zop.dev --debug
