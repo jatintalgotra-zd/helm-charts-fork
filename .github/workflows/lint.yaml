@@ -1,6 +1,9 @@
 name: Lint and Test Charts
 
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   lint-test:
@@ -21,6 +24,9 @@ jobs:
           CHANGED_DIRS=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep '^charts/' | cut -d/ -f1-2 | sort -u)
           for chart in $CHANGED_DIRS; do
             if [ -f "$chart/Chart.yaml" ]; then
+              echo "Updating dependencies for $chart"
+              helm dependency update "$chart"
+          
               echo "Linting $chart"
               helm lint "$chart"
             fi
