@@ -59,6 +59,7 @@ func main() {
 
 			if len(result.Errors) > 0 {
 				fmt.Printf("   [ERROR] Lint failed: %v\n", result.Errors[0])
+				os.Exit(1)
 			} else {
 				fmt.Printf("   [OK] Lint succeeded.\n")
 			}
