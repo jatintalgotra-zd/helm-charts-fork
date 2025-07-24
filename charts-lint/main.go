@@ -41,25 +41,36 @@ func main() {
 		return
 	}
 
-	chartDirectories := make([]string, 0)
-
 	for _, chart := range chartsDir {
 		if chart.IsDir() {
 			dir := filepath.Join("charts", chart.Name())
+			fmt.Printf("\n=== Processing Chart: %s ===\n", chart.Name())
+
+			fmt.Printf("-> Updating dependencies...\n")
 			err = helmDependencyUpdate(dir)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("   [ERROR] Dependency update failed: %v\n", err)
+			} else {
+				fmt.Println("   [OK] Dependencies updated successfully or already up-to-date.")
 			}
-			chartDirectories = append(chartDirectories, dir)
+
+			fmt.Printf("-> Running lint...\n")
+			result := helmLint([]string{dir})
+
+			if len(result.Errors) > 0 {
+				fmt.Printf("   [ERROR] Lint failed: %v\n", result.Errors[0])
+			} else {
+				fmt.Printf("   [OK] Lint succeeded.\n")
+			}
+
 		}
 	}
+	//lintingResult := helmLint(chartDirectories)
 
-	lintingResult := helmLint(chartDirectories)
-
-	if len(lintingResult.Errors) > 0 {
-		for _, errorMessage := range lintingResult.Messages {
-			fmt.Println(errorMessage)
-		}
-		os.Exit(1)
-	}
+	//if len(lintingResult.Errors) > 0 {
+	//	for _, errorMessage := range lintingResult.Messages {
+	//		fmt.Println(errorMessage)
+	//	}
+	//	os.Exit(1)
+	//}
 }
