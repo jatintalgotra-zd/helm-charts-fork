@@ -13,9 +13,9 @@ import (
 //	Err   error
 //}
 
-func helmDependencyUpdate(path string) error {
-
-}
+//func helmDependencyUpdate(path string) error {
+//
+//}
 
 func helmLint(paths []string) *helm.LintResult {
 	lint := helm.NewLint()
