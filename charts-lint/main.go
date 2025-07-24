@@ -22,35 +22,42 @@ func execCommand(command string, args ...string) error {
 func main() {
 	lintingErrors := make([]lintError, 0)
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	chartsDir, err := os.ReadDir("charts")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	for _, chart := range chartsDir {
+		if !chart.IsDir() {
+			continue
+		}
+
+		dir := filepath.Join("charts", chart.Name())
+		if _, err = os.Stat(dir + "/Chart.yaml"); err != nil {
+			fmt.Println("Chart not found in directory: ", dir, "\nError: ", err)
+			return
+		}
+
+		fmt.Println("Updating dependencies for: ", dir)
+		err = execCommand("helm", "dependency", "update", dir)
 		if err != nil {
-			return err
+			lintingErrors = append(lintingErrors, lintError{
+				Chart: dir,
+				Err:   err,
+			})
 		}
 
-		if info.Name() == "Chart.yaml" {
-			dir := filepath.Dir(path)
-
-			fmt.Println("Updating dependencies for: ", dir)
-			err = execCommand("helm", "dependency", "update", dir)
-			if err != nil {
-				lintingErrors = append(lintingErrors, lintError{
-					Chart: dir,
-					Err:   err,
-				})
-			}
-
-			fmt.Println("Linting chart: ", dir)
-			err = execCommand("helm", "lint", dir)
-			if err != nil {
-				lintingErrors = append(lintingErrors, lintError{
-					Chart: dir,
-					Err:   err,
-				})
-			}
+		fmt.Println("Linting chart: ", dir)
+		err = execCommand("helm", "lint", dir)
+		if err != nil {
+			lintingErrors = append(lintingErrors, lintError{
+				Chart: dir,
+				Err:   err,
+			})
 		}
+	}
 
-		return nil
-	})
 	if err != nil {
 		fmt.Println(err)
 	} else if len(lintingErrors) > 0 {
