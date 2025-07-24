@@ -51,7 +51,7 @@ func main() {
 			fmt.Printf("-> Updating dependencies...\n")
 			err = helmDependencyUpdate(dir)
 			if err != nil {
-				fmt.Printf("ERROR: Dependency update failed: %v\n", err)
+				fmt.Println(err)
 			} else {
 				fmt.Println("OK: Dependencies updated successfully or already up-to-date.")
 			}
@@ -61,7 +61,7 @@ func main() {
 
 			if len(result.Errors) > 0 {
 				failedCharts = append(failedCharts, chart.Name())
-				fmt.Printf("Error: Lint failed: %v\n", result.Errors[0])
+				fmt.Println(result.Errors[0])
 			} else {
 				fmt.Printf("OK: Lint succeeded.\n")
 			}
