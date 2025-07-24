@@ -59,9 +59,9 @@ func main() {
 			fmt.Printf("\n-> Running lint...\n")
 			result := helmLint([]string{dir})
 
-			if len(result.Errors) > 0 {
+			if len(result.Messages) > 0 {
 				failedCharts = append(failedCharts, chart.Name())
-				fmt.Println(result.Errors[0])
+				fmt.Println(result.Messages[0])
 			} else {
 				fmt.Printf("OK: Lint succeeded.\n")
 			}
