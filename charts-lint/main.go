@@ -56,7 +56,7 @@ func main() {
 				fmt.Println("OK: Dependencies updated successfully or already up-to-date.")
 			}
 
-			fmt.Printf("\n-> Running lint...\n")
+			fmt.Printf("-> Running lint for %v...\n", chart.Name())
 			result := helmLint([]string{dir})
 
 			if len(result.Messages) > 0 {
@@ -69,7 +69,10 @@ func main() {
 	}
 
 	if len(failedCharts) > 0 {
-		fmt.Printf("\n=== Failed Charts: %v\n", failedCharts)
+		fmt.Println("\n=== Failed Charts:\n")
+		for _, failedChart := range failedCharts {
+			fmt.Println(failedChart)
+		}
 		os.Exit(1)
 	}
 }
