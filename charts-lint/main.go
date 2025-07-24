@@ -57,12 +57,9 @@ func main() {
 	lintingResult := helmLint(chartDirectories)
 
 	if len(lintingResult.Errors) > 0 {
-		for _, err = range lintingResult.Errors {
-			fmt.Println(err)
+		for _, errorMessage := range lintingResult.Messages {
+			fmt.Println(errorMessage)
 		}
-	}
-
-	for _, err = range lintingResult.Messages {
-		fmt.Println(err)
+		os.Exit(1)
 	}
 }
