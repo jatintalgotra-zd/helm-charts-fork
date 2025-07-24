@@ -57,5 +57,6 @@ func main() {
 		for _, e := range lintingErrors {
 			fmt.Printf("Linting error in chart %v: %v \n", e.Chart, e.Err)
 		}
+		os.Exit(1)
 	}
 }
