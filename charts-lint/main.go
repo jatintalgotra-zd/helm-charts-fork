@@ -11,6 +11,11 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 )
 
+type failedChart struct {
+	name string
+	path string
+}
+
 func helmDependencyUpdate(path string) error {
 	settings := cli.New()
 
@@ -41,7 +46,7 @@ func main() {
 		return
 	}
 
-	failedCharts := make([]string, 0)
+	failedCharts := make([]failedChart, 0)
 
 	for _, chart := range chartsDir {
 		if chart.IsDir() {
@@ -60,7 +65,10 @@ func main() {
 			result := helmLint([]string{dir})
 
 			if len(result.Messages) > 0 {
-				failedCharts = append(failedCharts, chart.Name())
+				failedCharts = append(failedCharts, failedChart{
+					name: chart.Name(),
+					path: dir,
+				})
 				fmt.Println(result.Messages[0])
 			} else {
 				fmt.Printf("OK: Lint succeeded.\n")
@@ -70,8 +78,8 @@ func main() {
 
 	if len(failedCharts) > 0 {
 		fmt.Println("\n=== Failed Charts:")
-		for _, failedChart := range failedCharts {
-			fmt.Println(failedChart)
+		for _, chart := range failedCharts {
+			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
 		}
 		os.Exit(1)
 	}
