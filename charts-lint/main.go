@@ -1,14 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
-
-	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"helm.sh/helm/v3/pkg/action"
 )
 
 type failedChart struct {
@@ -17,6 +19,14 @@ type failedChart struct {
 }
 
 func helmDependencyUpdate(path string) error {
+	dep := action.NewDependency()
+	var buff bytes.Buffer
+	_ = dep.List(path, &buff)
+	if strings.HasPrefix(buff.String(), "WARNING") {
+		return nil
+	}
+
+	fmt.Printf("-> Updating dependencies for %v...\n", path)
 	settings := cli.New()
 
 	manager := &downloader.Manager{
@@ -30,10 +40,12 @@ func helmDependencyUpdate(path string) error {
 	if err := manager.Update(); err != nil {
 		return fmt.Errorf("failed to update dependencies for %s: %w", path, err)
 	}
+	fmt.Printf("-> Successfully updated dependencies for %v\n\n", path)
 	return nil
 }
 
 func helmLint(paths []string) *action.LintResult {
+	fmt.Printf("-> Running lint for %v...\n", paths[0])
 	lint := action.NewLint()
 	result := lint.Run(paths, nil)
 	return result
@@ -53,15 +65,15 @@ func main() {
 			dir := filepath.Join("charts", chart.Name())
 			fmt.Printf("\n=== Processing Chart: %s ===\n", chart.Name())
 
-			fmt.Printf("-> Updating dependencies...\n")
 			err = helmDependencyUpdate(dir)
 			if err != nil {
+				failedCharts = append(failedCharts, failedChart{
+					name: chart.Name(),
+					path: dir,
+				})
 				fmt.Println(err)
-			} else {
-				fmt.Println("OK: Dependencies updated successfully or already up-to-date.")
 			}
 
-			fmt.Printf("\n-> Running lint for %v...\n", chart.Name())
 			result := helmLint([]string{dir})
 
 			if len(result.Messages) > 0 {
