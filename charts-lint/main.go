@@ -77,7 +77,7 @@ func getDiff() ([]string, error) {
 	for _, line := range changed {
 		split := strings.Split(line, "/")
 		if split[0] == "charts" {
-			dir := strings.Join(split[1:2], "/")
+			dir := split[1]
 			if !check[dir] {
 				check[dir] = true
 				result = append(result, dir)
@@ -89,11 +89,6 @@ func getDiff() ([]string, error) {
 }
 
 func main() {
-	err := os.Setenv("GITHUB_BASE_REF", "main")
-	if err != nil {
-		panic(err)
-	}
-
 	changedCharts, err := getDiff()
 	if err != nil {
 		panic(err)
@@ -116,7 +111,7 @@ func main() {
 
 		result := helmLint([]string{dir})
 
-		if len(result.Messages) > 0 {
+		if len(result.Errors) > 0 {
 			failedCharts = append(failedCharts, failedChart{
 				name: chart,
 				path: dir,
