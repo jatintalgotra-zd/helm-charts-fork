@@ -64,7 +64,7 @@ func getDiff() ([]string, error) {
 		return nil, fmt.Errorf("GITHUB_BASE_REF environment variable not set")
 	}
 
-	cmd := exec.Command("git", "diff", "--name-only", base)
+	cmd := exec.Command("git", "diff", "--name-only", fmt.Sprintf("origin/%s...HEAD", base))
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 
@@ -91,8 +91,6 @@ func getDiff() ([]string, error) {
 }
 
 func main() {
-	os.Setenv("GITHUB_BASE_REF", "main")
-
 	changedCharts, err := getDiff()
 	if err != nil {
 		fmt.Println(err)
