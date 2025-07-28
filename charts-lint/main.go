@@ -66,13 +66,12 @@ func getDiff() ([]string, error) {
 
 	cmd := exec.Command("git", "diff", "--name-only", fmt.Sprintf("%s...HEAD", base))
 	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
 	out, err := cmd.Output()
+
 	if err != nil {
-		fmt.Println(string(out))
 		return nil, err
 	}
-
+	
 	changed := strings.Split(string(out), "\n")
 	check := make(map[string]bool)
 	result := make([]string, 0)
@@ -92,6 +91,8 @@ func getDiff() ([]string, error) {
 }
 
 func main() {
+	os.Setenv("GITHUB_BASE_REF", "main")
+
 	changedCharts, err := getDiff()
 	if err != nil {
 		fmt.Println(err)
