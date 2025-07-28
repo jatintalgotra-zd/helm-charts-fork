@@ -65,6 +65,8 @@ func getDiff() ([]string, error) {
 	}
 
 	cmd := exec.Command("git", "diff", "--name-only", fmt.Sprintf("%s...HEAD", base))
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 	out, err := cmd.Output()
 	if err != nil {
 		fmt.Println(string(out))
