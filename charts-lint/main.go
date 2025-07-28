@@ -64,14 +64,14 @@ func getDiff() ([]string, error) {
 		return nil, fmt.Errorf("GITHUB_BASE_REF environment variable not set")
 	}
 
-	cmd := exec.Command("git", "diff", "--name-only", fmt.Sprintf("%s...HEAD", base))
+	cmd := exec.Command("git", "diff", "--name-only", base)
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	changed := strings.Split(string(out), "\n")
 	check := make(map[string]bool)
 	result := make([]string, 0)
