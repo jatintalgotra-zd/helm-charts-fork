@@ -7,7 +7,7 @@ type: application
 icon: "https://storage.googleapis.com/zopdev-test-bucket/zop/files/originals/20241129/517f58c3-427a-4cd0-8d37-abe941776827-download1.jpeg"
 dependencies:
   - name: postgres
-    version: 0.0.3
+    version: 0.0.11
     repository:  https://helm.zop.dev
   - name: redis
     version: 0.0.1
