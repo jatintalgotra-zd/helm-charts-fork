@@ -67,7 +67,7 @@ func getDiff() ([]string, error) {
 	base := os.Getenv("GITHUB_BASE_REF")
 
 	if base == "" {
-		return nil, fmt.Errorf("GITHUB_BASE_REF environment variable not set")
+		return nil, fmt.Errorf("GITHUB_BASE_REF environment variable not there")
 	}
 
 	// run git diff to get differences in base branch and head
