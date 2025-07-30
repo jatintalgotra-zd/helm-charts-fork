@@ -3,11 +3,11 @@ package helm
 import (
 	"bytes"
 	"errors"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/lint/support"
 	"testing"
 
 	"go.uber.org/mock/gomock"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/lint/support"
 )
 
 var errTest = errors.New("test error")
@@ -39,7 +39,7 @@ func TestDependencyUpdate(t *testing.T) {
 			path: "testPath",
 			expect: func() {
 				mockDep.EXPECT().List("testPath", gomock.Any()).Return(nil).Do(func(_ string, buff *bytes.Buffer) {
-					buff.Write([]byte("WARNING: no dependency was found.\n"))
+					buff.WriteString("WARNING: no dependency was found.\n")
 				})
 			},
 			expectedError: nil,

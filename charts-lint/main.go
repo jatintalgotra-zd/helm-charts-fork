@@ -3,19 +3,21 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/google/go-github/v74/github"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
-	"os"
-	"path/filepath"
 
 	githubpkg "charts-lint/github"
 	helmpkg "charts-lint/helm"
 )
 
-var ErrMissingBaseRef = errors.New("GITHUB_BASE_REF environment variable not set")
+// ErrMissingToken is returned when the GITHUB_TOKEN environment variable is not set.
+var ErrMissingToken = errors.New("GITHUB_TOKEN environment variable not set")
 
 // helmChart holds chart name and its path.
 type helmChart struct {
@@ -23,23 +25,49 @@ type helmChart struct {
 	path string
 }
 
+// getGithubClient helper function to get GitHub client from access token.
 func getGithubClient() (*github.Client, error) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		return nil, errors.New("GITHUB_TOKEN environment variable not set")
+		return nil, ErrMissingToken
 	}
+
 	return github.NewClient(nil).WithAuthToken(token), nil
 }
 
+// summary helper function to print summary of helm lint.
+func summary(failedCharts, passedCharts []helmChart) {
+	// Passed charts
+	if len(passedCharts) > 0 {
+		fmt.Printf("\nTOTAL CHARTS UPDATED: %v\n", len(passedCharts)+len(failedCharts))
+		fmt.Println("\n===> Charts that passed helm lint:")
+
+		for _, chart := range passedCharts {
+			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
+		}
+	}
+
+	// Failed charts
+	if len(failedCharts) > 0 {
+		fmt.Println("\n===> Charts not passing helm lint:")
+
+		for _, chart := range failedCharts {
+			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
+		}
+	}
+}
+
 func main() {
-	// Get charts changed in the current PR
+	// get client for GitHub
 	client, err := getGithubClient()
 	if err != nil {
 		panic(err)
 	}
 
+	// dependency injection for GitHub client
 	c := githubpkg.New(client.PullRequests)
 
+	// Get charts changed in the current PR
 	changedCharts, err := c.GetDiff()
 	if err != nil {
 		panic(err)
@@ -95,29 +123,15 @@ func main() {
 			}
 		} else {
 			passedCharts = append(passedCharts, hc)
+
 			fmt.Printf("OK: Lint succeeded.\n")
 		}
 	}
 
 	// Final summary
-	// Passed charts
-	if len(passedCharts) > 0 {
-		fmt.Printf("\nTOTAL CHARTS UPDATED: %v\n", len(passedCharts)+len(failedCharts))
-		fmt.Println("\n===> Charts that passed helm lint:")
+	summary(failedCharts, passedCharts)
 
-		for _, chart := range passedCharts {
-			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
-		}
-	}
-
-	// Failed charts
 	if len(failedCharts) > 0 {
-		fmt.Println("\n===> Charts not passing helm lint:")
-
-		for _, chart := range failedCharts {
-			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
-		}
-
 		os.Exit(1)
 	}
 }
