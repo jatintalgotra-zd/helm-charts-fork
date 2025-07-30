@@ -1,12 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-github/v74/github"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
@@ -14,61 +12,21 @@ import (
 
 	githubpkg "charts-lint/github"
 	helmpkg "charts-lint/helm"
+	"charts-lint/models"
+	"charts-lint/utils"
 )
-
-// ErrMissingToken is returned when the GITHUB_TOKEN environment variable is not set.
-var ErrMissingToken = errors.New("GITHUB_TOKEN environment variable not set")
-
-// helmChart holds chart name and its path.
-type helmChart struct {
-	name string
-	path string
-}
-
-// getGithubClient helper function to get GitHub client from access token.
-func getGithubClient() (*github.Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		return nil, ErrMissingToken
-	}
-
-	return github.NewClient(nil).WithAuthToken(token), nil
-}
-
-// summary helper function to print summary of helm lint.
-func summary(failedCharts, passedCharts []helmChart) {
-	// Passed charts
-	if len(passedCharts) > 0 {
-		fmt.Printf("\nTOTAL CHARTS UPDATED: %v\n", len(passedCharts)+len(failedCharts))
-		fmt.Println("\n===> Charts that passed helm lint:")
-
-		for _, chart := range passedCharts {
-			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
-		}
-	}
-
-	// Failed charts
-	if len(failedCharts) > 0 {
-		fmt.Println("\n===> Charts not passing helm lint:")
-
-		for _, chart := range failedCharts {
-			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
-		}
-	}
-}
 
 func main() {
 	// get client for GitHub
-	client, err := getGithubClient()
+	c, err := utils.GetGithubClient()
 	if err != nil {
 		panic(err)
 	}
 
-	// dependency injection for GitHub client
-	c := githubpkg.New(client.PullRequests)
+	client := githubpkg.New(c.PullRequests)
 
 	// Get charts changed in the current PR
-	changedCharts, err := c.GetDiff()
+	changedCharts, err := client.GetDiff()
 	if err != nil {
 		panic(err)
 	}
@@ -79,8 +37,8 @@ func main() {
 		return
 	}
 
-	failedCharts := make([]helmChart, 0)
-	passedCharts := make([]helmChart, 0)
+	failedCharts := make([]models.HelmChart, 0)
+	passedCharts := make([]models.HelmChart, 0)
 
 	// Process each changed chart
 	for _, chart := range changedCharts {
@@ -97,10 +55,10 @@ func main() {
 		}
 		lint := action.NewLint()
 
-		// dependency injection
+		// helm client
 		helm := helmpkg.New(dep, manager, lint)
 
-		hc := helmChart{name: chart, path: dir}
+		hc := models.HelmChart{Name: chart, Path: dir}
 		fmt.Printf("\n=== Processing Chart: %s ===\n", chart)
 
 		// Step 1: Update dependencies
@@ -129,7 +87,7 @@ func main() {
 	}
 
 	// Final summary
-	summary(failedCharts, passedCharts)
+	utils.Summary(failedCharts, passedCharts)
 
 	if len(failedCharts) > 0 {
 		os.Exit(1)

@@ -1,7 +1,6 @@
 package github
 
 import (
-	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -33,7 +32,7 @@ func TestGithubClient_GetDiff(t *testing.T) {
 				chart := "charts/test"
 
 				mockPullRequest.EXPECT().
-					ListFiles(context.Background(), "test", "test", 1, nil).
+					ListFiles(gomock.Any(), "test", "test", 1, nil).
 					Return([]*github.CommitFile{
 						{Filename: &chart},
 					}, nil, nil)
@@ -50,7 +49,7 @@ func TestGithubClient_GetDiff(t *testing.T) {
 				chart := "charts/test"
 
 				mockPullRequest.EXPECT().
-					ListFiles(context.Background(), "test", "test", 1, nil).
+					ListFiles(gomock.Any(), "test", "test", 1, nil).
 					Return([]*github.CommitFile{
 						{Filename: &chart},
 					}, nil, errTest)

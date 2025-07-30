@@ -9,18 +9,18 @@ import (
 	"helm.sh/helm/v3/pkg/lint/support"
 )
 
-type helm struct {
+type helmClient struct {
 	dep     dependency
 	manager manager
 	lint    linter
 }
 
-func New(dep dependency, manager manager, lint linter) *helm {
-	return &helm{dep: dep, manager: manager, lint: lint}
+func New(dep dependency, manager manager, lint linter) *helmClient {
+	return &helmClient{dep: dep, manager: manager, lint: lint}
 }
 
 // DependencyUpdate runs 'helm dependency update' for a given chart path.
-func (h *helm) DependencyUpdate(path string) error {
+func (h *helmClient) DependencyUpdate(path string) error {
 	var buff bytes.Buffer
 	// runs helm dependency list
 	err := h.dep.List(path, &buff)
@@ -46,7 +46,7 @@ func (h *helm) DependencyUpdate(path string) error {
 }
 
 // Lint runs 'helm lint' on the given chart paths.
-func (h *helm) Lint(paths []string) []error {
+func (h *helmClient) Lint(paths []string) []error {
 	fmt.Printf("-> Running lint for %v...\n", paths[0])
 
 	result := h.lint.Run(paths, nil)
