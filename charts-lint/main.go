@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,54 +12,16 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
+
+	helmpkg "charts-lint/helm"
 )
 
-// helmChart holds chart name and its path
+var ErrMissingBaseRef = errors.New("GITHUB_BASE_REF environment variable not set")
+
+// helmChart holds chart name and its path.
 type helmChart struct {
 	name string
 	path string
-}
-
-// helmDependencyUpdate runs 'helm dependency update' for a given chart path
-func helmDependencyUpdate(path string) error {
-	dep := action.NewDependency()
-	var buff bytes.Buffer
-	// runs helm dependency list
-	_ = dep.List(path, &buff)
-
-	// early exit for no dependencies warning
-	if strings.HasPrefix(buff.String(), "WARNING") {
-		return nil
-	}
-
-	fmt.Printf("-> Updating dependencies for %v...\n", path)
-	settings := cli.New()
-
-	manager := &downloader.Manager{
-		Out:              os.Stdout,
-		ChartPath:        path,
-		Getters:          getter.All(settings),
-		RepositoryConfig: settings.RepositoryConfig,
-		RepositoryCache:  settings.RepositoryCache,
-	}
-
-	if err := manager.Update(); err != nil {
-		return fmt.Errorf("failed to update dependencies for %s: %w", path, err)
-	}
-
-	fmt.Printf("-> Successfully updated dependencies for %v\n\n", path)
-
-	return nil
-}
-
-// helmLint runs 'helm lint' on the given chart paths
-func helmLint(paths []string) *action.LintResult {
-	fmt.Printf("-> Running lint for %v...\n", paths[0])
-
-	lint := action.NewLint()
-	result := lint.Run(paths, nil)
-
-	return result
 }
 
 // getDiff returns a list of unique chart names under the 'charts/' directory that have been modified between the base branch and HEAD.
@@ -67,14 +29,16 @@ func getDiff() ([]string, error) {
 	base := os.Getenv("GITHUB_BASE_REF")
 
 	if base == "" {
-		return nil, fmt.Errorf("GITHUB_BASE_REF environment variable not there")
+		return nil, ErrMissingBaseRef
 	}
 
-	// run git diff to get differences in base branch and head
-	cmd := exec.Command("git", "diff", "--name-only", fmt.Sprintf("origin/%s...HEAD", base))
-	cmd.Stderr = os.Stderr
-	out, err := cmd.Output()
+	arg := fmt.Sprintf("origin/%s...HEAD", base)
 
+	// run git diff to get differences in base branch and head
+	cmd := exec.Command("git", "diff", "--name-only", arg)
+	cmd.Stderr = os.Stderr
+
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +54,7 @@ func getDiff() ([]string, error) {
 			dir := split[1]
 			if !check[dir] {
 				check[dir] = true
+
 				result = append(result, dir)
 			}
 		}
@@ -99,6 +64,7 @@ func getDiff() ([]string, error) {
 }
 
 func main() {
+	os.Setenv("GITHUB_BASE_REF", "main")
 	// Get charts changed in the current PR
 	changedCharts, err := getDiff()
 	if err != nil {
@@ -119,22 +85,41 @@ func main() {
 	for _, chart := range changedCharts {
 		dir := filepath.Join("charts", chart)
 
+		dep := action.NewDependency()
+		settings := cli.New()
+		manager := &downloader.Manager{
+			Out:              os.Stdout,
+			ChartPath:        dir,
+			Getters:          getter.All(settings),
+			RepositoryConfig: settings.RepositoryConfig,
+			RepositoryCache:  settings.RepositoryCache,
+		}
+		lint := action.NewLint()
+
+		// dependency injection
+		helm := helmpkg.New(dep, manager, lint)
+
 		hc := helmChart{name: chart, path: dir}
 		fmt.Printf("\n=== Processing Chart: %s ===\n", chart)
 
 		// Step 1: Update dependencies
-		err = helmDependencyUpdate(dir)
+		err = helm.DependencyUpdate(dir)
 		if err != nil {
 			failedCharts = append(failedCharts, hc)
+
 			fmt.Println(err)
+
 			continue
 		}
 
 		// Step 2: Lint
-		result := helmLint([]string{dir})
-		if len(result.Errors) > 0 {
+		errorMessages := helm.Lint([]string{dir})
+		if errorMessages != nil {
 			failedCharts = append(failedCharts, hc)
-			fmt.Println(result.Messages[0])
+
+			for _, err = range errorMessages {
+				fmt.Println(err)
+			}
 		} else {
 			passedCharts = append(passedCharts, hc)
 			fmt.Printf("OK: Lint succeeded.\n")
@@ -142,16 +127,23 @@ func main() {
 	}
 
 	// Final summary
-	if len(failedCharts) > 0 {
-		fmt.Println("\n=== Charts not passing helm lint:")
-		for _, chart := range failedCharts {
-			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
-		}
-		os.Exit(1)
-	} else {
+	// Passed charts
+	if len(passedCharts) > 0 {
 		fmt.Println("\n=== Charts that passed helm lint:")
+
 		for _, chart := range passedCharts {
 			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
 		}
+	}
+
+	// Failed charts
+	if len(failedCharts) > 0 {
+		fmt.Println("\n=== Charts not passing helm lint:")
+
+		for _, chart := range failedCharts {
+			fmt.Printf("-> %s - path: %s\n", chart.name, chart.path)
+		}
+
+		os.Exit(1)
 	}
 }
