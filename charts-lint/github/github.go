@@ -29,8 +29,21 @@ func GetDiff() ([]string, error) {
 	}
 
 	files := make([]string, 0)
+	check := make(map[string]bool)
+
 	for _, file := range commitFiles {
-		files = append(files, file.GetFilename())
+		name := file.GetFilename()
+
+		split := strings.Split(name, "/")
+		if split[0] == "charts" && len(split) > 1 {
+			// Target only paths like charts/<chart>
+			dir := split[1]
+			if !check[dir] {
+				check[dir] = true
+
+				files = append(files, dir)
+			}
+		}
 	}
 
 	return files, nil
