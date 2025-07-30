@@ -2,19 +2,26 @@ package github
 
 import (
 	"context"
-	"github.com/google/go-github/v74/github"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func getClient() *github.Client {
-	token := os.Getenv("GITHUB_TOKEN")
-	return github.NewClient(nil).WithAuthToken(token)
+type githubClient struct {
+	client Client
 }
 
-func GetDiff() ([]string, error) {
-	c := getClient()
+func New(client Client) *githubClient {
+	return &githubClient{client: client}
+}
+//
+//func getClient() *github.Client {
+//	token := os.Getenv("GITHUB_TOKEN")
+//	return github.NewClient(nil).WithAuthToken(token)
+//}
+
+func (c *githubClient) GetDiff() ([]string, error) {
+
 	owner := os.Getenv("REPOSITORY_OWNER")
 	repoPath := os.Getenv("REPOSITORY_NAME")
 	repo := strings.Split(repoPath, "/")[1]
@@ -23,7 +30,7 @@ func GetDiff() ([]string, error) {
 		return nil, err
 	}
 
-	commitFiles, _, err := c.PullRequests.ListFiles(context.Background(), owner, repo, prNumber, nil)
+	commitFiles,_, err := c.client.ListFiles(context.Background(), owner, repo, prNumber, nil)
 	if err != nil {
 		return nil, err
 	}
