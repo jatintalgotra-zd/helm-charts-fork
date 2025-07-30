@@ -9,12 +9,15 @@ import (
 	"helm.sh/helm/v3/pkg/lint/support"
 )
 
+// helmClient provides methods to execute helm commands like dependency update and linting
+// using injected dependency, manager and linter interfaces.
 type helmClient struct {
 	dep     dependency
 	manager manager
 	lint    linter
 }
 
+// New returns a new helmClient with the provided dependency, manager, and linter.
 func New(dep dependency, manager manager, lint linter) *helmClient {
 	return &helmClient{dep: dep, manager: manager, lint: lint}
 }
@@ -50,11 +53,13 @@ func (h *helmClient) Lint(paths []string) []error {
 	fmt.Printf("-> Running lint for %v...\n", paths[0])
 
 	result := h.lint.Run(paths, nil)
-	errors := make([]error, 0)
 
+	// early exit if no Warning or Error
 	if !action.HasWarningsOrErrors(result) {
 		return nil
 	}
+
+	errors := make([]error, 0)
 
 	for _, msg := range result.Messages {
 		if msg.Severity == support.ErrorSev {

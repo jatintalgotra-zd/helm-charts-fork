@@ -1,9 +1,14 @@
 package utils
 
 import (
-	"charts-lint/models"
+	"bytes"
 	"errors"
+	"io"
+	"os"
+	"strings"
 	"testing"
+
+	"charts-lint/models"
 )
 
 func TestGetGithubClient(t *testing.T) {
@@ -48,17 +53,47 @@ func TestSummary(t *testing.T) {
 		{
 			name: "TestSummary",
 			failed: []models.HelmChart{
-				{},
+				{Name: "test", Path: "fail/test"},
 			},
 			passed: []models.HelmChart{
-				{},
+				{Name: "test", Path: "pass/test"},
 			},
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			originalStdout := os.Stdout
+
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Error creating pipe: %v", err)
+			}
+
+			os.Stdout = w
+			defer func() {
+				os.Stdout = originalStdout
+
+				_ = r.Close()
+			}()
+
 			Summary(tc.failed, tc.passed)
+
+			_ = w.Close()
+
+			var buf bytes.Buffer
+			if _, err := io.Copy(&buf, r); err != nil {
+				t.Fatalf("Error reading stdout: %v", err)
+			}
+
+			output := buf.String()
+			if !strings.Contains(output, "fail/test") {
+				t.Errorf("Expected output to include 'fail/test', got: %s", output)
+			}
+
+			if !strings.Contains(output, "pass/test") {
+				t.Errorf("Expected output to include 'pass/test', got: %s", output)
+			}
 		})
 	}
 }

@@ -73,16 +73,16 @@ func main() {
 
 		// Step 2: Lint
 		errorMessages := helm.Lint([]string{dir})
-		if errorMessages != nil {
+		if errorMessages == nil || len(errorMessages) == 0 {
+			passedCharts = append(passedCharts, hc)
+
+			fmt.Printf("OK: Lint succeeded.\n")
+		} else {
 			failedCharts = append(failedCharts, hc)
 
 			for _, err = range errorMessages {
 				fmt.Println(err)
 			}
-		} else {
-			passedCharts = append(passedCharts, hc)
-
-			fmt.Printf("OK: Lint succeeded.\n")
 		}
 	}
 
